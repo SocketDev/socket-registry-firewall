@@ -49,9 +49,7 @@ export SOCKET_SECURITY_API_TOKEN=your-api-key-here
 
 ### 3. Create Docker Compose File
 
-Create a `docker-compose.yml`
-
-Using `socketdev/socket-registry-firewall` image:
+Create a `docker-compose.yml`:
 
 ```yaml
 services:
@@ -74,35 +72,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-```
-
-Or create a `Dockerfile`
-
-Using tar file from [socket-registry-firewall](https://github.com/SocketDev/socket-registry-firewall/releases) releases:
-
-```dockerfile
-# Match the architecture of your target platform (amd64 or arm64)
-FROM openresty/openresty:1.27.1.2-0-alpine
-
-# Using files fetched from GitHub
-ADD https://github.com/SocketDev/socket-registry-firewall/releases/download/v1.1.85/socket-firewall-1.1.85.amd64.tgz /app/socket-firewall-1.1.85.amd64.tgz
-ADD https://github.com/SocketDev/socket-registry-firewall/blob/main/entrypoint.sh?raw=true /usr/local/bin/entrypoint.sh
-
-# Or using an already downloaded copy
-COPY ./path/to/socket-firewall-1.1.85.amd64.tgz /app/
-COPY ./path/to/entrypoint.sh /usr/local/bin/entrypoint.sh
-
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Tell entrypoint.sh where to find the tarball so it can self-install on startup
-ENV SOCKET_TARBALL_PATH=/app/socket-firewall-1.1.85.amd64.tgz
-
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-```
-
-Or run with environment config:
-```
-docker run -e SOCKET_TARBALL_PATH=/app/socket-firewall-1.1.85.amd64.tgz image
 ```
 
 Create a minimal `socket.yml`:

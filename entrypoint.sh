@@ -16,30 +16,6 @@ error() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] ERROR: $*" >&2
 }
 
-# Unpack tarball if the SOCKET_TARBALL_PATH environment variable is set.
-# Set this via ENV in your Dockerfile or with -e at docker run / in docker-compose.
-# Allows users to embed a release tarball in their own Docker image alongside
-# this entrypoint.sh and have it self-install at startup, replicating the same
-# layout as the pre-built socketdev/socket-registry-firewall image.
-#
-# Example Dockerfile usage:
-#   ENV SOCKET_TARBALL_PATH=/app/socket-firewall.1.1.86.amd64.tgz
-install_from_tarball() {
-    if [ -z "$SOCKET_TARBALL_PATH" ]; then
-        return 0
-    fi
-
-    if [ ! -f "$SOCKET_TARBALL_PATH" ]; then
-        error "SOCKET_TARBALL_PATH is set to '$SOCKET_TARBALL_PATH' but file not found"
-        exit 1
-    fi
-
-    log "Installing from tarball: $SOCKET_TARBALL_PATH"
-    tar -xzf "$SOCKET_TARBALL_PATH" -C /
-    chmod +x /usr/local/bin/socket-proxy-config-tool
-    log "Tarball installed successfully"
-}
-
 # Run dev environment scripts
 run_dev_scripts() {
     local scripts_dir="/entrypoint/scripts"
@@ -72,10 +48,7 @@ main() {
         log "SOCKET_ENV=dev detected, running dev scripts..."
         run_dev_scripts
     fi
-
-    # Install from tarball if SOCKET_TARBALL_PATH is set
-    install_from_tarball
-
+    
     # Configuration file location
     local config_file="${CONFIG_FILE:-/app/socket.yml}"
     
