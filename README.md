@@ -24,7 +24,14 @@ Enterprise-grade security proxy that protects your package registries (npm, PyPI
 ✅ **Enterprise Ready** - Outbound proxy, custom CAs, Splunk logging  
 ✅ **Zero Config** - Works with public registries out-of-the-box  
 
-## Quick Start
+## Installation Methods
+
+Socket Registry Firewall can be deployed in two ways:
+
+1. **Pre-built Docker Image** (Recommended) - Pull and run the official image
+2. **Tarball Installation** - Build your own image using the firewall tarball (for air-gapped or custom environments)
+
+## Quick Start (Pre-built Image)
 
 ### 1. Get Socket API Key
 
@@ -120,7 +127,176 @@ docker compose up -d
 
 That's it! The firewall is now protecting the npm registry at `http://sfw.your_company.com:8080/npm/`.
 
-## Testing It Works
+---
+
+## Alternative: Tarball Installation
+
+For air-gapped environments, custom base images, or when you need to build your own container, Socket provides the firewall as a tarball that can be extracted into any OpenResty-based image.
+
+### When to Use Tarball Installation
+
+- **Air-gapped environments** - No access to Docker Hub
+- **Custom base images** - Need specific OpenResty version or OS distribution
+- **Security requirements** - Must build from source in your own registry
+- **Custom modifications** - Need to add additional tools or configurations
+
+### Prerequisites
+
+1. **Obtain the tarball** from Socket (e.g., `socket-firewall-1.1.94.arm64.tgz`)
+2. **OpenResty base image** - Compatible with `openresty/openresty:1.27.1.2-11-alpine` or similar
+
+### Installation Steps
+
+#### 1. Create Dockerfile
+
+Create a `Dockerfile` in your project directory:
+
+```dockerfile
+FROM openresty/openresty:1.27.1.2-11-alpine
+
+# Copy and extract the Socket Firewall tarball
+COPY socket-firewall-1.1.94.arm64.tgz /app/install/socket-firewall-1.1.94.arm64.tgz
+COPY entrypoint.sh /app/entrypoint.sh
+
+RUN chmod +x /app/entrypoint.sh \
+  && tar -xzf /app/install/socket-firewall-1.1.94.arm64.tgz -C /
+
+# Install basic dependencies
+RUN apk add --no-cache curl ca-certificates git openssl bash && \
+    # Prefer IPv4 over IPv6 to avoid upstream IPv6 connection attempts
+    printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf || true
+
+# Install lua-resty libraries
+RUN cd /tmp && \
+    # Install lua-resty-http
+    git clone https://github.com/ledgetech/lua-resty-http.git && \
+    cd lua-resty-http && \
+    cp -r lib/resty/* /usr/local/openresty/lualib/resty/ && \
+    cd /tmp && \
+    # Install lua-resty-openssl (needed for HTTPS)
+    git clone https://github.com/fffonion/lua-resty-openssl.git && \
+    cd lua-resty-openssl && \
+    cp -r lib/resty/* /usr/local/openresty/lualib/resty/ && \
+    cd /tmp && \
+    # Install lua-resty-redis (needed for Redis caching)
+    git clone https://github.com/openresty/lua-resty-redis.git && \
+    cd lua-resty-redis && \
+    cp lib/resty/redis.lua /usr/local/openresty/lualib/resty/ && \
+    cd / && \
+    rm -rf /tmp/lua-resty-http /tmp/lua-resty-openssl /tmp/lua-resty-redis
+
+WORKDIR /app
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+```
+
+**Note**: Adjust the tarball filename to match your version and architecture (e.g., `socket-firewall-1.1.94.amd64.tgz` for x86_64).
+
+#### 2. Create Entrypoint Script
+
+Download the `entrypoint.sh` script from Socket (provided with the tarball package) or request it from Socket support.
+
+Place it in your project directory and make it executable:
+
+```bash
+chmod +x entrypoint.sh
+```
+
+The entrypoint script handles:
+- Configuration generation using `socket-proxy-config-tool`
+- Environment variable loading
+- Nginx configuration validation
+- Auto-discovery daemon startup (if configured)
+- Nginx process management
+
+#### 3. Create Docker Compose File
+
+Create a `docker-compose.yml` for the tarball-based installation:
+
+```yaml
+services:
+  socket-firewall:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: socketdev/socket-registry-firewall-tar:latest
+    ports:
+      - "8085:8080"   # HTTP (redirects to HTTPS)
+      - "8445:8443"   # HTTPS
+    environment:
+      # Required: Socket.dev API token
+      - SOCKET_SECURITY_API_TOKEN=${SOCKET_SECURITY_API_TOKEN}
+    volumes:
+      # Configuration file
+      - ./socket.yml:/app/socket.yml:ro
+      # SSL certificates directory
+      - ./ssl:/etc/nginx/ssl
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "https://localhost:8443/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 1
+```
+
+**Note**: Different ports (8085/8445) are used in this example to avoid conflicts if running both methods simultaneously.
+
+#### 4. Build and Start
+
+```bash
+# Build the image
+docker compose build
+
+# Start the firewall
+docker compose up -d
+
+# View logs
+docker compose logs -f socket-firewall
+```
+
+### Tarball Contents
+
+The Socket Firewall tarball includes:
+
+- `/usr/local/bin/socket-proxy-config-tool` - Configuration generation tool
+- `/usr/local/openresty/lualib/socket/*.lua` - Lua modules for package parsing and security checks
+- `/usr/local/openresty/nginx/conf/snippets/` - Nginx configuration snippets
+- Supporting files for all 8 ecosystems (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, NuGet, Go)
+
+The tarball extracts to standard OpenResty paths, making it compatible with any OpenResty-based image.
+
+### Customization Options
+
+When using tarball installation, you can:
+
+- **Use different base images**: Change the `FROM` line to use specific OpenResty versions or distributions
+- **Add custom tools**: Install additional packages in the RUN command
+- **Modify entrypoint**: Customize the entrypoint script for your environment
+- **Layer scanning**: Add image scanning tools in your build pipeline
+- **Internal registries**: Push built images to your private container registry
+
+### Verification
+
+After starting the firewall, verify it's working:
+
+```bash
+# Check health endpoint
+curl -k https://localhost:8445/health
+
+# Expected response:
+{"status":"healthy","version":"1.1.94"}
+
+# View startup logs
+docker compose logs socket-firewall | grep -i "socket firewall"
+```
+
+---
+
+## Configuration (Both Methods)
+
+Both the pre-built image and tarball installation use the same `socket.yml` configuration file format.
+
+### Testing It Works
 
 **Test npm:**
 ```bash
@@ -180,7 +356,7 @@ dependencyResolutionManagement {
 }
 ```
 
-## Configuration
+## Advanced Configuration
 
 ### Basic: Custom Domains
 
