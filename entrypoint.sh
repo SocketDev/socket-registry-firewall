@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Simplified entrypoint script using socket-proxy-config-tool
 
 set -e
