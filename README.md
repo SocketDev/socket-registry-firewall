@@ -12,7 +12,7 @@ Enterprise-grade security proxy that protects your package registries (npm, PyPI
 - **OpenVSX** (VS Code Extensions) - `open-vsx.org`
 - **NuGet** (.NET) - `nuget.org`
 - **Go** (Go Modules) - `proxy.golang.org`
-- **Conda** (Python/R/etc.) - `conda.anaconda.org` *(treated as PyPI until native support)*
+- **Conda** (Python/R/etc.) - `repo.anaconda.com/pkgs/main` *(treated as PyPI until native support)*
 
 ## Key Features
 
@@ -478,11 +478,11 @@ socket:
 socket:
   outbound_proxy: http://proxy.company.com:3128
   
-  # Verify SSL with corporate CA
+  # Verify SSL with corporate CA (default: false)
   api_ssl_verify: true
   api_ssl_ca_cert: /path/to/corporate-ca.crt
   
-  # Apply same CA to upstream registries
+  # Apply same CA to upstream registries (defaults to api_ssl_verify)
   # (or set upstream_ssl_verify separately if different)
 ```
 
@@ -552,8 +552,8 @@ SOCKET_NO_PROXY=localhost,127.0.0.1
 # Health endpoint (no auth required)
 curl https://localhost:8443/health
 
-# Expected response:
-# {"status":"healthy","version":"1.1.23"}
+# Expected response (plain text):
+# SocketFirewall/1.1.23 - Health OK - npm (registry.npmjs.org)
 ```
 
 ## Monitoring & Logging
@@ -655,16 +655,6 @@ metadata_filtering:
   enabled: true
   filter_blocked: true   # Remove blocked packages
   filter_warn: false     # Keep warned packages (show warnings only)
-```
-
-### Bulk PURL Lookup
-
-Pre-cache security status for faster lookups:
-
-```yaml
-bulk_purl_lookup:
-  enabled: true
-  batch_size: 5000  # PURLs per batch
 ```
 
 ### External Routes File
