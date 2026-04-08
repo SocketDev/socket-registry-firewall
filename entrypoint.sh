@@ -104,9 +104,48 @@ main() {
         log "Route sync daemon not needed (mode=local or not configured)"
     fi
     
-    # Start nginx in foreground
+    # Start external registry cooldown daemon in background if configured
+    # The daemon checks external_registry_cooldown.enabled internally and exits if disabled
+    log "Checking external registry cooldown configuration..."
+    /usr/local/bin/socket-proxy-config-tool cooldown --config "$config_file" &
+    COOLDOWN_PID=$!
+    sleep 1
+    if kill -0 "$COOLDOWN_PID" 2>/dev/null; then
+        log "Cooldown daemon running in background (PID: $COOLDOWN_PID)"
+    else
+        log "Cooldown daemon not needed (not configured or disabled)"
+    fi
+    
+    # Start config refresh daemon in background if deployment is configured
+    # The daemon checks socket.deployment internally and exits if not set
+    log "Checking remote config refresh configuration..."
+    /usr/local/bin/socket-proxy-config-tool config-refresh --config "$config_file" &
+    CONFIG_REFRESH_PID=$!
+    sleep 1
+    if kill -0 "$CONFIG_REFRESH_PID" 2>/dev/null; then
+        log "Config refresh daemon running in background (PID: $CONFIG_REFRESH_PID)"
+    else
+        log "Config refresh daemon not needed (no socket.deployment configured)"
+    fi
+    
+    # Start nginx in foreground, with signal handling to clean up background daemons
     log "Starting nginx..."
-    exec /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;' -c /app/nginx.conf
+
+    # Trap SIGTERM/SIGINT to kill background daemons then forward to nginx
+    cleanup() {
+        log "Received shutdown signal, stopping background daemons..."
+        kill "$DAEMON_PID" "$COOLDOWN_PID" "$CONFIG_REFRESH_PID" 2>/dev/null || true
+        wait "$DAEMON_PID" "$COOLDOWN_PID" "$CONFIG_REFRESH_PID" 2>/dev/null || true
+        log "Background daemons stopped"
+    }
+    trap cleanup TERM INT
+
+    /usr/local/openresty/nginx/sbin/nginx -g 'daemon off;' -c /app/nginx.conf &
+    NGINX_PID=$!
+    wait "$NGINX_PID"
+    EXIT_CODE=$?
+    cleanup
+    exit $EXIT_CODE
 }
 
 # Run main
