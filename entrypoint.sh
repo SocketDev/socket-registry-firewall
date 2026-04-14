@@ -104,17 +104,9 @@ main() {
         log "Route sync daemon not needed (mode=local or not configured)"
     fi
     
-    # Start external registry cooldown daemon in background if configured
-    # The daemon checks external_registry_cooldown.enabled internally and exits if disabled
-    log "Checking external registry cooldown configuration..."
-    /usr/local/bin/socket-proxy-config-tool cooldown --config "$config_file" &
-    COOLDOWN_PID=$!
-    sleep 1
-    if kill -0 "$COOLDOWN_PID" 2>/dev/null; then
-        log "Cooldown daemon running in background (PID: $COOLDOWN_PID)"
-    else
-        log "Cooldown daemon not needed (not configured or disabled)"
-    fi
+    # External registry cooldown is now handled directly in Lua (no daemon needed).
+    # "api" mode calls Socket cooldown API; "local" mode queries registries via Lua cosocket.
+    log "External registry cooldown: handled inline by Lua (no daemon)"
     
     # Start config refresh daemon in background if deployment is configured
     # The daemon checks socket.deployment internally and exits if not set
@@ -131,12 +123,13 @@ main() {
     # Start nginx in foreground, with signal handling to clean up background daemons
     log "Starting nginx..."
 
-    # Trap SIGTERM/SIGINT to kill background daemons then forward to nginx
+    # Trap SIGTERM/SIGINT to forward signal to nginx and kill background daemons
     cleanup() {
-        log "Received shutdown signal, stopping background daemons..."
-        kill "$DAEMON_PID" "$COOLDOWN_PID" "$CONFIG_REFRESH_PID" 2>/dev/null || true
-        wait "$DAEMON_PID" "$COOLDOWN_PID" "$CONFIG_REFRESH_PID" 2>/dev/null || true
-        log "Background daemons stopped"
+        log "Received shutdown signal, forwarding to nginx (PID: $NGINX_PID)..."
+        kill -SIGTERM "$NGINX_PID" 2>/dev/null || true
+        kill "$DAEMON_PID" "$CONFIG_REFRESH_PID" 2>/dev/null || true
+        wait "$NGINX_PID" 2>/dev/null || true
+        log "Nginx and background daemons stopped"
     }
     trap cleanup TERM INT
 
