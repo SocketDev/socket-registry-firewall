@@ -143,7 +143,7 @@ For air-gapped environments, custom base images, or when you need to build your 
 ### Prerequisites
 
 1. **Obtain the tarball** from Socket (e.g., `socket-firewall-1.1.94.arm64.tgz`)
-2. **OpenResty base image** - Compatible with `openresty/openresty:1.27.1.2-11-alpine` or similar
+2. **OpenResty base image** - Compatible with `openresty/openresty:1.29.2.4-alpine` or similar
 
 ### Installation Steps
 
@@ -152,7 +152,7 @@ For air-gapped environments, custom base images, or when you need to build your 
 Create a `Dockerfile` in your project directory:
 
 ```dockerfile
-FROM openresty/openresty:1.27.1.2-11-alpine
+FROM openresty/openresty:1.29.2.4-alpine
 
 # Copy and extract the Socket Firewall tarball
 COPY socket-firewall-1.1.94.arm64.tgz /app/install/socket-firewall-1.1.94.arm64.tgz
