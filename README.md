@@ -398,6 +398,47 @@ path_routing:
       registry: maven
 ```
 
+### Load Balancing Across Clusters (`allowed_domain` + `use_incoming_domain`)
+
+A path-routing deployment normally answers only to `domain`, and a request whose
+`Host` doesn't match falls through to the default server and 404s. That becomes a
+problem when you run the firewall in several clusters behind a load balancer: the
+LB forwards requests to a pod under a per-cluster hostname, which is *not* the
+stable LB hostname. Two options let you handle this:
+
+```yaml
+path_routing:
+  enabled: true
+  domain: socket-firewall-registry.apps.company.com   # stable LB hostname
+
+  # (A) allowed_domain: additional hostnames this server answers to, beyond
+  # `domain`. Without it, a Host that doesn't match `domain` 404s. Entries may be
+  # exact names, nginx wildcards (*.cluster.company.com), or a regex (~^.+$) for a
+  # true catch-all.
+  allowed_domain:
+    - socket-firewall-registry.gateway.unified-30.internal.api.company.com
+    - "*.unified-clusters.internal.api.company.com"
+
+  # (B) use_incoming_domain: which host package URLs are rewritten to.
+  #   false (default) -> rewrite using `domain` (the stable LB hostname), so
+  #     follow-up downloads route back through the load balancer and spread across
+  #     clusters even though the request arrived on a per-cluster Host.
+  #   true             -> rewrite using the incoming Host header.
+  use_incoming_domain: false
+
+  routes:
+    - path: /npm
+      upstream: https://registry.npmjs.org
+      registry: npm
+```
+
+`allowed_domain` defaults to empty and `use_incoming_domain` to `false`. For a
+single-domain deployment the incoming `Host` already equals `domain`, so the
+defaults reproduce today's behavior. For the load-balancer case above,
+`allowed_domain` stops the 404s and the default `use_incoming_domain: false` makes
+the firewall advertise the LB hostname (`domain`) in rewritten URLs so downloads
+balance across clusters rather than pinning to the cluster that served the metadata.
+
 ### Enterprise: Auto-Discovery from Artifactory/Nexus
 
 Automatically sync repository routes:
