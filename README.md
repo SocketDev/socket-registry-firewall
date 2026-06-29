@@ -519,12 +519,12 @@ socket:
 socket:
   outbound_proxy: http://proxy.company.com:3128
   
-  # Verify SSL with corporate CA (default: false)
+  # Verify SSL with corporate CA (default: true)
   api_ssl_verify: true
   api_ssl_ca_cert: /path/to/corporate-ca.crt
   
-  # Apply same CA to upstream registries (defaults to api_ssl_verify)
-  # (or set upstream_ssl_verify separately if different)
+  # Apply same setting to upstream registries (defaults to api_ssl_verify)
+  # upstream_ssl_verify: false  # set false only when upstream uses untrusted/self-signed certs without ssl.ca_cert
 ```
 
 ### Redis Caching (Multi-Instance)
