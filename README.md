@@ -1,6 +1,6 @@
 # Socket Registry Firewall
 
-Enterprise-grade security proxy that protects your package registries (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, NuGet, Go) by scanning packages with Socket's security API in real-time to block malicious packages before they reach your systems.
+Enterprise-grade security proxy that protects your package registries (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, NuGet, Go, Conda, HuggingFace) by scanning packages with Socket's security API in real-time to block malicious packages before they reach your systems.
 
 ## Supported Registries
 
@@ -17,7 +17,7 @@ Enterprise-grade security proxy that protects your package registries (npm, PyPI
 ## Key Features
 
 ✅ **Real-time Security** - Blocks malicious packages before installation  
-✅ **Multi-Registry** - Protects all 8 major package ecosystems  
+✅ **Multi-Registry** - Protects all 10 major package ecosystems  
 ✅ **Flexible Routing** - Domain-based or path-based routing  
 ✅ **Auto-Discovery** - Sync routes from Artifactory/Nexus automatically  
 ✅ **High Performance** - Intelligent caching with Redis support  
@@ -261,7 +261,7 @@ The Socket Firewall tarball includes:
 - `/usr/local/bin/socket-proxy-config-tool` - Configuration generation tool
 - `/usr/local/openresty/lualib/socket/*.lua` - Lua modules for package parsing and security checks
 - `/usr/local/openresty/nginx/conf/snippets/` - Nginx configuration snippets
-- Supporting files for all 8 ecosystems (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, NuGet, Go)
+- Supporting files for all 10 ecosystems (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, NuGet, Go, Conda, HuggingFace)
 
 The tarball extracts to standard OpenResty paths, making it compatible with any OpenResty-based image.
 
