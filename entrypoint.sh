@@ -68,6 +68,16 @@ main() {
     
     log "Configuration generation complete"
     
+    # Record which env names the OPERATOR set on the container, BEFORE
+    # config.env is sourced below. Sourcing mixes derived values into this
+    # shell's environment, and the background daemons inherit that mix -- so
+    # without this marker the config-refresh daemon cannot tell an operator
+    # override (which must outrank the dashboard) from a stale derived value
+    # it must strip before regenerating (D-51). awk's ENVIRON is used instead
+    # of `env` parsing so values containing newlines cannot forge names.
+    SOCKET_OPERATOR_ENV_NAMES="$(awk 'BEGIN{for (n in ENVIRON) printf "%s,", n}' </dev/null)"
+    export SOCKET_OPERATOR_ENV_NAMES
+
     # Source environment variables from config.env if it exists
     if [ -f /app/config.env ]; then
         log "Loading environment variables from config.env"
