@@ -1,6 +1,6 @@
 # Socket Registry Firewall
 
-Enterprise-grade security proxy that protects your package registries (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, NuGet, Go, Conda, HuggingFace) by scanning packages with Socket's security API in real-time to block malicious packages before they reach your systems.
+Enterprise-grade security proxy that protects your package registries (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, VS Code Marketplace, NuGet, Go, Conda, HuggingFace) by scanning packages with Socket's security API in real-time to block malicious packages before they reach your systems.
 
 ## Supported Registries
 
@@ -10,6 +10,7 @@ Enterprise-grade security proxy that protects your package registries (npm, PyPI
 - **Cargo** (Rust) - `crates.io`
 - **RubyGems** (Ruby) - `rubygems.org`
 - **OpenVSX** (VS Code Extensions) - `open-vsx.org`
+- **VS Code Marketplace** (VS Code Extensions) - `marketplace.visualstudio.com`
 - **NuGet** (.NET) - `nuget.org`
 - **Go** (Go Modules) - `proxy.golang.org`
 - **Conda** (Python/R/etc.) - `repo.anaconda.com/pkgs/main` *(treated as PyPI until native support)*
@@ -261,7 +262,7 @@ The Socket Firewall tarball includes:
 - `/usr/local/bin/socket-proxy-config-tool` - Configuration generation tool
 - `/usr/local/openresty/lualib/socket/*.lua` - Lua modules for package parsing and security checks
 - `/usr/local/openresty/nginx/conf/snippets/` - Nginx configuration snippets
-- Supporting files for all 10 ecosystems (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, NuGet, Go, Conda, HuggingFace)
+- Supporting files for all 11 ecosystems (npm, PyPI, Maven, Cargo, RubyGems, OpenVSX, VS Code Marketplace, NuGet, Go, Conda, HuggingFace)
 
 The tarball extracts to standard OpenResty paths, making it compatible with any OpenResty-based image.
 
@@ -765,6 +766,8 @@ registries:
     domains: [rubygems.company.com]
   openvsx:
     domains: [vsx.company.com]
+  vscode:
+    domains: [vscode.company.com]
   nuget:
     domains: [nuget.company.com]
   go:
@@ -785,6 +788,7 @@ path_routing:
     - { path: /cargo, upstream: https://index.crates.io, registry: cargo }
     - { path: /rubygems, upstream: https://rubygems.org, registry: rubygems }
     - { path: /openvsx, upstream: https://open-vsx.org, registry: openvsx }
+    - { path: /vscode, upstream: https://marketplace.visualstudio.com, registry: vscode }
     - { path: /nuget, upstream: https://api.nuget.org, registry: nuget }
     - { path: /go, upstream: https://proxy.golang.org, registry: go }
 ```
