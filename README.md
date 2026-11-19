@@ -167,24 +167,27 @@ RUN apk add --no-cache curl ca-certificates git openssl bash && \
     # Prefer IPv4 over IPv6 to avoid upstream IPv6 connection attempts
     printf 'precedence ::ffff:0:0/96  100\n' >> /etc/gai.conf || true
 
-# Install lua-resty libraries
+# Install lua-resty libraries at the versions the Socket Firewall image ships.
+# Each `test` fails the build if a clone is not the expected commit.
 RUN cd /tmp && \
     # Install lua-resty-http
-    git clone https://github.com/ledgetech/lua-resty-http.git && \
-    cd lua-resty-http && \
-    cp -r lib/resty/* /usr/local/openresty/lualib/resty/ && \
-    cd /tmp && \
+    git clone --branch v0.17.2 --depth 1 https://github.com/ledgetech/lua-resty-http.git && \
+    test "$(git -C lua-resty-http rev-parse HEAD)" = 183310324026120ab7eaf5dd82b9be90ae63aadf && \
+    cp -r lua-resty-http/lib/resty/* /usr/local/openresty/lualib/resty/ && \
     # Install lua-resty-openssl (needed for HTTPS)
-    git clone https://github.com/fffonion/lua-resty-openssl.git && \
-    cd lua-resty-openssl && \
-    cp -r lib/resty/* /usr/local/openresty/lualib/resty/ && \
-    cd /tmp && \
+    git clone --branch 1.8.0 --depth 1 https://github.com/fffonion/lua-resty-openssl.git && \
+    test "$(git -C lua-resty-openssl rev-parse HEAD)" = 16faff4c825eab8d5a78cfabe07adec69d9e2fa5 && \
+    cp -r lua-resty-openssl/lib/resty/* /usr/local/openresty/lualib/resty/ && \
     # Install lua-resty-redis (needed for Redis caching)
-    git clone https://github.com/openresty/lua-resty-redis.git && \
-    cd lua-resty-redis && \
-    cp lib/resty/redis.lua /usr/local/openresty/lualib/resty/ && \
-    cd / && \
-    rm -rf /tmp/lua-resty-http /tmp/lua-resty-openssl /tmp/lua-resty-redis
+    git clone --branch v0.33 --depth 1 https://github.com/openresty/lua-resty-redis.git && \
+    test "$(git -C lua-resty-redis rev-parse HEAD)" = 3fdc727f176f565adca8c2b350a636bd74e93de2 && \
+    cp lua-resty-redis/lib/resty/redis.lua /usr/local/openresty/lualib/resty/ && \
+    # Install the Prometheus metrics library (needed for /metrics)
+    git clone --branch 0.20240525 --depth 1 https://github.com/knyar/nginx-lua-prometheus.git && \
+    test "$(git -C nginx-lua-prometheus rev-parse HEAD)" = eb15e1bb3e3c6a42ef6d04fc4cb0e98f79bc75ea && \
+    cp nginx-lua-prometheus/prometheus.lua nginx-lua-prometheus/prometheus_keys.lua \
+       nginx-lua-prometheus/prometheus_resty_counter.lua /usr/local/openresty/lualib/ && \
+    rm -rf /tmp/lua-resty-http /tmp/lua-resty-openssl /tmp/lua-resty-redis /tmp/nginx-lua-prometheus
 
 WORKDIR /app
 
